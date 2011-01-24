@@ -1,0 +1,68 @@
+#! /usr/bin/env python
+
+def run():
+    from pytools.log import LogManager
+    import sys
+    from optparse import OptionParser
+
+    parser = OptionParser(usage="%prog {serve,dump SQLITE_FILENAME,populate-test}")
+
+    parser.add_option("--dburl", metavar="http://user:pwd@server:5984",
+            default="http://localhost:5984")
+    parser.add_option("--dbname", metavar="DB",
+            default=None)
+    parser.add_option("--run-descr", metavar="RUN",
+            default=None)
+    parser.add_option("--scan-max", metavar="COUNT", type="int",
+            default=None)
+    options, args = parser.parse_args()
+
+    if not options.dbname:
+        parser.print_help()
+        print "*** ERROR Must specify database name"
+        sys.exit(1)
+
+    if not options.run_descr:
+        parser.print_help()
+        print "*** ERROR Must specify run descriptor"
+        sys.exit(1)
+
+    import sys
+    if len(sys.argv) < 1:
+        parser.print_help()
+        sys.exit(1)
+
+    from couchdb.client import Server as CouchServer
+    csrv = CouchServer(options.dburl)
+    cdb = csrv[options.dbname]
+
+    cmd = args[0]
+
+    if cmd == "serve":
+        from datapyle.couch_queue import serve_queue
+        serve_queue(cdb, options.run_descr)
+    elif cmd == "dump":
+        if len(args) < 2:
+            parser.print_help()
+            print "*** ERROR Must specify output file name for dump"
+            sys.exit(1)
+
+        from datapyle.couch_queue import dump_couch_to_sqlite
+        dump_couch_to_sqlite(cdb, options.run_descr, args[1],
+                scan_max=options.scan_max)
+    elif cmd == "populate-test":
+        from datapyle.couch_queue import populate_queue, generate_sleep_jobs
+        populate_queue(generate_sleep_jobs, cdb, options.run_descr)
+    else:
+        parser.print_help()
+        print "*** ERROR Unrecognized command '%s'" % cmd
+        sys.exit(1)
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    run()
