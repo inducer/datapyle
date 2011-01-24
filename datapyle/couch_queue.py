@@ -141,7 +141,7 @@ def populate_queue(job_generator, couch_db, run_descr, other_metadata={}):
 
         docs.append(doc)
 
-        if len(docs) > 1000:
+        if len(docs) >= 1000:
             upload_docs(docs)
 
     upload_docs(docs)
@@ -212,6 +212,8 @@ def serve_queue(couch_db, run_descr):
             job_doc["j_state"] = "dn"
 
             finished_jobs.append(job_doc)
+
+        print "[pid %d] finished %d jobs" % len(finished_jobs)
 
         update_res = couch_db.update(finished_jobs)
         successful_updates = sum(1 for success, doc_id, exc in update_res if success)
