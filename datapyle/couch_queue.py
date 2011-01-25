@@ -209,7 +209,7 @@ def serve_queue(couch_db):
 
             finished_jobs.append(job_doc)
 
-        print "[pid %d] finished %d jobs" % len(finished_jobs)
+        print "[pid %d] finished %d jobs" % (pid, len(finished_jobs))
 
         update_res = couch_db.update(finished_jobs)
         successful_updates = sum(1 for success, doc_id, exc in update_res if success)
