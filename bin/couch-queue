@@ -11,8 +11,6 @@ def run():
             default="http://localhost:5984")
     parser.add_option("--dbname", metavar="DB",
             default=None)
-    parser.add_option("--run-descr", metavar="RUN",
-            default=None)
     parser.add_option("--scan-max", metavar="COUNT", type="int",
             default=None)
     options, args = parser.parse_args()
@@ -20,11 +18,6 @@ def run():
     if not options.dbname:
         parser.print_help()
         print "*** ERROR Must specify database name"
-        sys.exit(1)
-
-    if not options.run_descr:
-        parser.print_help()
-        print "*** ERROR Must specify run descriptor"
         sys.exit(1)
 
     import sys
@@ -40,7 +33,7 @@ def run():
 
     if cmd == "serve":
         from datapyle.couch_queue import serve_queue
-        serve_queue(cdb, options.run_descr)
+        serve_queue(cdb)
     elif cmd == "dump":
         if len(args) < 2:
             parser.print_help()
@@ -48,11 +41,10 @@ def run():
             sys.exit(1)
 
         from datapyle.couch_queue import dump_couch_to_sqlite
-        dump_couch_to_sqlite(cdb, options.run_descr, args[1],
-                scan_max=options.scan_max)
+        dump_couch_to_sqlite(cdb, args[1], scan_max=options.scan_max)
     elif cmd == "populate-test":
         from datapyle.couch_queue import populate_queue, generate_sleep_jobs
-        populate_queue(generate_sleep_jobs, cdb, options.run_descr)
+        populate_queue(generate_sleep_jobs, cdb)
     else:
         parser.print_help()
         print "*** ERROR Unrecognized command '%s'" % cmd

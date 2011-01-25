@@ -95,7 +95,7 @@ def update_views(couch_db):
                 function(doc)
                 {
                   if (doc.type && doc.type == "job" && doc.j_state == "av")
-                    emit([doc.run, doc._id], {"_id": doc._id});
+                    emit(doc._id, {"_id": doc._id});
                 }
                 """,
                 },
@@ -105,7 +105,7 @@ def update_views(couch_db):
 
 
 
-def populate_queue(job_generator, couch_db, run_descr, other_metadata={}):
+def populate_queue(job_generator, couch_db, other_metadata={}):
     update_views(couch_db)
 
     job_count = 0
@@ -134,7 +134,6 @@ def populate_queue(job_generator, couch_db, run_descr, other_metadata={}):
                 "create_t": time(),
                 "dat": base64.encodestring(
                     zlib.compress(pickle.dumps(job, protocol=-1))),
-                "run": run_descr,
                 }
 
         doc.update(other_metadata.copy())
@@ -148,7 +147,7 @@ def populate_queue(job_generator, couch_db, run_descr, other_metadata={}):
 
 
 
-def serve_queue(couch_db, run_descr):
+def serve_queue(couch_db):
     update_views(couch_db)
 
     hexchars = "0123456789abcdef"
@@ -170,15 +169,12 @@ def serve_queue(couch_db, run_descr):
         view_opts = {
                 "limit": 400,
                 "include_docs": "true",
-                "endkey": [run_descr, "z"], # z sorts after all hex chars
+                "endkey": "z", # z sorts after all hex chars
                 }
 
         unrestricted = empty_view_count > 5
         if not unrestricted:
-            view_opts["startkey"] = [
-                    run_descr, "".join(choice(hexchars) for i in range(5))]
-        else:
-            view_opts["startkey"] = [ run_descr,]
+            view_opts["startkey"] = "".join(choice(hexchars) for i in range(5))
 
         available_jobs = couch_db.view("job_queue/available-jobs", **view_opts)
 
@@ -233,7 +229,7 @@ def serve_queue(couch_db, run_descr):
 # }}}
 
 # {{{ couch -> sqlite dumper
-def dump_couch_to_sqlite(couch_db, run_descr, outfile, scan_max=None):
+def dump_couch_to_sqlite(couch_db, outfile, scan_max=None):
     import sqlite3 as sqlite
 
     # {{{ scan for types
@@ -243,7 +239,7 @@ def dump_couch_to_sqlite(couch_db, run_descr, outfile, scan_max=None):
     pb = ProgressBar("scan (pass 1/2)", len(couch_db))
     scan_count = 0
     for doc in generate_all_docs(couch_db):
-        if "type" in doc and doc["type"] == "job" and doc["run"] == run_descr:
+        if "type" in doc and doc["type"] == "job":
             for k, v in doc.iteritems():
                 if (k in column_type_dict 
                         and column_type_dict[k] != type(v) 
@@ -291,7 +287,7 @@ def dump_couch_to_sqlite(couch_db, run_descr, outfile, scan_max=None):
     for doc in generate_all_docs(couch_db):
         data = [None] * len(column_types)
         for i, (col_name, col_tp) in enumerate(column_types):
-            if "type" in doc and doc["type"] == "job" and doc["run"] == run_descr:
+            if "type" in doc and doc["type"] == "job":
                 try:
                     data[i] = doc[col_name]
                 except KeyError:
