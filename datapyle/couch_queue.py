@@ -241,11 +241,17 @@ def dump_couch_to_sqlite(couch_db, outfile, scan_max=None):
     for doc in generate_all_docs(couch_db):
         if "type" in doc and doc["type"] == "job":
             for k, v in doc.iteritems():
+                new_type = type(v)
                 if (k in column_type_dict 
-                        and column_type_dict[k] != type(v) 
+                        and column_type_dict[k] != new_type
                         and v is not None):
-                    raise RuntimeError("ambiguous types for '%s'" % k)
-                column_type_dict[k] = type(v)
+                    old_type = column_type_dict[k]
+                    if set([old_type, new_type]) == set([float, int]):
+                        new_type = float
+                    else:
+                        raise RuntimeError(
+                                "ambiguous types for '%s': %s, %s" % (k, new_type, old_type))
+                column_type_dict[k] = new_type
 
             scan_count += 1
             if scan_max is not None and scan_count >= scan_max:
@@ -259,13 +265,12 @@ def dump_couch_to_sqlite(couch_db, outfile, scan_max=None):
     column_types = []
 
     for name, tp in column_type_dict.iteritems():
-        if tp == list:
-            print "Omitting '%s': can't convert lists" % name
-        else:
-            column_types.append((name, tp))
+        column_types.append((name, tp))
 
     def get_sql_type(tp):
         if tp in (str, unicode):
+            return "text"
+        elif issubclass(tp, list):
             return "text"
         elif issubclass(tp, int):
             return "integer"
@@ -279,6 +284,7 @@ def dump_couch_to_sqlite(couch_db, outfile, scan_max=None):
                 for name, tp in column_types))
     db_conn = sqlite.connect(outfile, timeout=30)
     db_conn.execute(create_stmt)
+    db_conn.commit()
 
     insert_stmt = "insert into data values (%s)" % (
             ",".join(["?"]*len(column_types)))
@@ -289,7 +295,10 @@ def dump_couch_to_sqlite(couch_db, outfile, scan_max=None):
         for i, (col_name, col_tp) in enumerate(column_types):
             if "type" in doc and doc["type"] == "job":
                 try:
-                    data[i] = doc[col_name]
+                    if isinstance(doc[col_name], list):
+                        data[i] = str(doc[col_name])
+                    else:
+                        data[i] = doc[col_name]
                 except KeyError:
                     print "doc %s had no field %s" % (doc["_id"], col_name)
 
