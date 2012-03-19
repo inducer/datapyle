@@ -111,7 +111,7 @@ class RunDB(object):
 
             style_idx = [0]
             for x, y, rest in split_cursor(cursor):
-                do_plot(x, y, row_rest)
+                do_plot(x, y, rest)
 
             if small_legend:
                 from matplotlib.font_manager import FontProperties
