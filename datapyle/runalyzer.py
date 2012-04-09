@@ -42,7 +42,7 @@ class RunDB(object):
         self.rank_agg_tables = set()
 
     def q(self, qry, *extra_args):
-        return self.db.execute(self.mangle_sql(qry), *extra_args)
+        return self.db.execute(self.mangle_sql(qry), extra_args)
 
     def mangle_sql(self, qry):
         return qry
