@@ -11,6 +11,23 @@ str_feat_re = re.compile(r"^([a-z]+)([A-Z][A-Za-z_0-9]+)$")
 
 
 
+sqlite_keywords = """
+    abort action add after all alter analyze and as asc attach
+    autoincrement before begin between by cascade case cast check
+    collate column commit conflict constraint create cross current_date
+    current_time current_timestamp database default deferrable deferred
+    delete desc detach distinct drop each else end escape except
+    exclusive exists explain fail for foreign from full glob group
+    having if ignore immediate in index indexed initially inner insert
+    instead intersect into is isnull join key left like limit match
+    natural no not notnull null of offset on or order outer plan pragma
+    primary query raise references regexp reindex release rename
+    replace restrict right rollback row savepoint select set table temp
+    temporary then to transaction trigger union unique update using
+    vacuum values view virtual when where""".split()
+
+
+
 
 def parse_dir_feature(feat, number):
     bool_match = bool_feat_re.match(feat)
@@ -252,10 +269,30 @@ def gather_single_file(outfile, infiles):
 
 
 
+def _normalize_types(x):
+    # get rid of numpy types
+    if isinstance(x, int):
+        return int(x)
+    if isinstance(x, float):
+        return float(x)
+    return x
+
+
+
+
 def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
         dbname_to_run_id):
     from pytools import ProgressBar
     pb = ProgressBar("Importing...", len(infiles))
+
+    feature_col_name_map ={}
+    for fname in features:
+        tgt_name = fmap.get(fname, fname)
+
+        if tgt_name.lower() in sqlite_keywords:
+            feature_col_name_map[fname] = tgt_name+"_"
+        else:
+            feature_col_name_map[fname] = tgt_name
 
     import sqlite3
     db_conn = sqlite3.connect(outfile)
@@ -263,7 +300,7 @@ def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
             "id integer primary key",
             "dirname text",
             "filename text",
-            ] + ["%s %s" % (fmap.get(fname, fname), ftype)
+            ] + ["%s %s" % (feature_col_name_map[fname], ftype)
                     for fname, ftype in features.iteritems()]
     db_conn.execute("create table runs (%s)" % ",".join(run_columns))
     db_conn.execute("create index runs_id on runs (id)")
@@ -295,11 +332,11 @@ def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
             dbfeatures = fg.get_db_features(dbname, logmgr)
             qry = "insert into runs (%s) values (%s)" % (
                 ",".join(["id", "dirname", "filename"]
-                    + [fmap.get(f[0], f[0]) for f in dbfeatures]), 
+                    + [feature_col_name_map[f[0]] for f in dbfeatures]), 
                 ",".join("?" * (len(dbfeatures)+3)))
             rows = db_conn.execute(qry, 
                     [run_id, dirname(dbname), basename(dbname)]
-                    + [f[2] for f in dbfeatures])
+                    + [_normalize_types(f[2]) for f in dbfeatures])
 
             written_run_ids.add(run_id)
 
