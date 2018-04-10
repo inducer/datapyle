@@ -3,7 +3,10 @@
 
 
 
+from __future__ import absolute_import
+from __future__ import print_function
 import code
+from six.moves import zip
 
 
 
@@ -53,7 +56,7 @@ class RunDB(object):
         if (qty, rank_aggregator) in self.rank_agg_tables:
             return tbl_name
 
-        print "INFO: building temporary rank aggregation table %s" % tbl_name
+        print("INFO: building temporary rank aggregation table %s" % tbl_name)
 
         self.db.execute("create temporary table %s as "
                 "select run_id, step, %s(value) as value "
@@ -84,7 +87,7 @@ class RunDB(object):
                 kwargs["dashes"] = style.dashes
                 kwargs["color"] = style.color
 
-            x, y = zip(*list(cursor))
+            x, y = list(zip(*list(cursor)))
             plot(x, y, *args, **kwargs)
         elif len(cursor.description) > 2:
             small_legend = kwargs.pop("small_legend", True)
@@ -102,9 +105,9 @@ class RunDB(object):
                     my_kwargs.setdefault("color", style.color)
 
                 my_kwargs.setdefault("label",
-                        format_label(zip(
+                        format_label(list(zip(
                             (col[0] for col in cursor.description[2:]),
-                            row_rest)))
+                            row_rest))))
 
                 plot(x, y, hold=True, *args, **my_kwargs)
                 style_idx[0] += 1
@@ -118,13 +121,13 @@ class RunDB(object):
                 legend(pad=0.04, prop=FontProperties(size=8), loc="best",
                         labelsep=0)
         else:
-            raise ValueError, "invalid number of columns"
+            raise ValueError("invalid number of columns")
 
         if self.interactive:
             show()
 
     def print_cursor(self, cursor):
-        print table_from_cursor(cursor)
+        print(table_from_cursor(cursor))
 
 
 
@@ -326,7 +329,7 @@ class RunalyzerConsole(code.InteractiveConsole):
             args = cmdline[cmd_end+1:]
 
         if cmd == "help":
-            print """
+            print("""
 Commands:
  .help        show this help message
  .q SQL       execute a (potentially mangled) query
@@ -357,7 +360,7 @@ Available Python symbols:
     dbprint(cursor): print result of cursor
     split_cursor(cursor): x,y,data gather that .plot uses internally
     table_from_cursor(cursor)
-"""
+""")
         elif cmd == "q":
             self.db.print_cursor(self.db.q(args))
 
@@ -366,7 +369,7 @@ Available Python symbols:
             columns = [column[0] for column in cursor.description]
             columns.sort()
             for col in columns:
-                print col
+                print(col)
         elif cmd == "quantities":
             self.db.print_cursor(self.db.q("select * from quantities order by name"))
         elif cmd == "title":
@@ -379,7 +382,7 @@ Available Python symbols:
             self.db.scatter_cursor(self.db.db.execute(
                 self.db.mangle_sql(args)))
         else:
-            print "invalid magic command"
+            print("invalid magic command")
 
 
 

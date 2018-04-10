@@ -1,13 +1,17 @@
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 from pytools import Record
 import numpy
 import uuid
 import datetime
 from time import time
-import cPickle as pickle
+import six.moves.cPickle as pickle
 import zlib
 import base64
 from couchdb.http import ResourceNotFound, ResourceConflict
+import six
+from six.moves import range
 
 
 
@@ -123,7 +127,7 @@ def populate_queue(job_generator, couch_db, other_metadata={}):
         docs[:] = []
 
         # ping the view to get it updated
-        iter(couch_db.view("job_queue/available-jobs", limit=1)).next()
+        next(iter(couch_db.view("job_queue/available-jobs", limit=1)))
 
 
     for num, job in enumerate(job_generator()):
@@ -180,7 +184,7 @@ def serve_queue(couch_db):
 
         job_docs = [row.doc for row in available_jobs]
 
-        print "[pid %d] got %d jobs" % (pid, len(job_docs))
+        print("[pid %d] got %d jobs" % (pid, len(job_docs)))
 
         if len(job_docs) == 0:
             if unrestricted:
@@ -209,12 +213,12 @@ def serve_queue(couch_db):
 
             finished_jobs.append(job_doc)
 
-        print "[pid %d] finished %d jobs" % (pid, len(finished_jobs))
+        print("[pid %d] finished %d jobs" % (pid, len(finished_jobs)))
 
         update_res = couch_db.update(finished_jobs)
         successful_updates = sum(1 for success, doc_id, exc in update_res if success)
-        print "[pid %d] submitted %d jobs, %d updated successfully" % (
-                pid, len(finished_jobs), successful_updates)
+        print("[pid %d] submitted %d jobs, %d updated successfully" % (
+                pid, len(finished_jobs), successful_updates))
         if successful_updates < len(finished_jobs):
             disp_count = 0
             for success, doc_id, exc in update_res:
@@ -223,7 +227,7 @@ def serve_queue(couch_db):
                     if disp_count == 10:
                         break
 
-                    print "[pid %d] fail job %s: %s" % (pid, doc_id, exc)
+                    print("[pid %d] fail job %s: %s" % (pid, doc_id, exc))
 
 
 # }}}
@@ -240,7 +244,7 @@ def dump_couch_to_sqlite(couch_db, outfile, scan_max=None):
     scan_count = 0
     for doc in generate_all_docs(couch_db):
         if "type" in doc and doc["type"] == "job":
-            for k, v in doc.iteritems():
+            for k, v in six.iteritems(doc):
                 new_type = type(v)
                 if (k in column_type_dict 
                         and column_type_dict[k] != new_type
@@ -264,11 +268,11 @@ def dump_couch_to_sqlite(couch_db, outfile, scan_max=None):
     del column_type_dict["type"]
     column_types = []
 
-    for name, tp in column_type_dict.iteritems():
+    for name, tp in six.iteritems(column_type_dict):
         column_types.append((name, tp))
 
     def get_sql_type(tp):
-        if tp in (str, unicode):
+        if tp in (str, six.text_type):
             return "text"
         elif issubclass(tp, list):
             return "text"
@@ -300,7 +304,7 @@ def dump_couch_to_sqlite(couch_db, outfile, scan_max=None):
                     else:
                         data[i] = doc[col_name]
                 except KeyError:
-                    print "doc %s had no field %s" % (doc["_id"], col_name)
+                    print("doc %s had no field %s" % (doc["_id"], col_name))
 
         db_conn.execute(insert_stmt, data)
         pb.progress()
