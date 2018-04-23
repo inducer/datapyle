@@ -176,7 +176,7 @@ class MagicRunDB(RunDB):
 
         import re
         magic_column_re = re.compile(r"\$([a-zA-Z][A-Za-z0-9_]*)(\.[a-z]*)?")
-        qry = magic_column_re.sub(replace_magic_column, qry)
+        qry, _ = magic_column_re.subn(replace_magic_column, qry)
 
         other_clauses = [  # noqa: F841
                 "UNION",  "INTERSECT", "EXCEPT", "WHERE", "GROUP",
