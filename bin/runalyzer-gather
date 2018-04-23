@@ -1,17 +1,15 @@
 #! /usr/bin/env python
 
-
-
-
 from __future__ import absolute_import
 from __future__ import print_function
 import re
 import six
+
+
 bool_feat_re = re.compile(r"^([a-z]+)(True|False)$")
 int_feat_re = re.compile(r"^([a-z]+)([0-9]+)$")
 real_feat_re = re.compile(r"^([a-z]+)([0-9]+\.?[0-9]*)$")
 str_feat_re = re.compile(r"^([a-z]+)([A-Z][A-Za-z_0-9]+)$")
-
 
 
 sqlite_keywords = """
@@ -30,8 +28,6 @@ sqlite_keywords = """
     vacuum values view virtual when where""".split()
 
 
-
-
 def parse_dir_feature(feat, number):
     bool_match = bool_feat_re.match(feat)
     if bool_match is not None:
@@ -46,8 +42,6 @@ def parse_dir_feature(feat, number):
     if str_match is not None:
         return (str_match.group(1), "text", str_match.group(2))
     return ("dirfeat%d" % number, "text", feat)
-
-
 
 
 def larger_sql_type(type_a, type_b):
@@ -66,8 +60,6 @@ def larger_sql_type(type_a, type_b):
     return "integer"
 
 
-
-
 def sql_type_and_value(value):
     if value is None:
         return None, None
@@ -79,8 +71,6 @@ def sql_type_and_value(value):
         return "real", value
     else:
         return "text", str(value)
-
-
 
 
 def sql_type_and_value_from_str(value):
@@ -100,8 +90,6 @@ def sql_type_and_value_from_str(value):
         return "text", str(value)
 
 
-
-
 class FeatureGatherer:
     def __init__(self, features_from_dir=False, features_file=None):
         self.features_from_dir = features_from_dir
@@ -117,7 +105,7 @@ class FeatureGatherer:
                 for entry in entries:
                     equal_idx = entry.find("=")
                     assert equal_idx != -1
-                    features.append((entry[:equal_idx],) + 
+                    features.append((entry[:equal_idx],) +
                             sql_type_and_value_from_str(entry[equal_idx+1:]))
 
                 self.dir_to_features[line[:colon_idx]] = features
@@ -138,8 +126,6 @@ class FeatureGatherer:
         return features
 
 
-
-
 def scan(fg, dbnames, progress=True):
     features = {}
     dbname_to_run_id = {}
@@ -154,7 +140,7 @@ def scan(fg, dbnames, progress=True):
         from pytools.log import LogManager
         try:
             logmgr = LogManager(dbname, "r")
-        except:
+        except Exception:
             print("Trouble with file '%s'" % dbname)
             raise
 
@@ -189,8 +175,6 @@ def scan(fg, dbnames, progress=True):
     return features, dbname_to_run_id
 
 
-
-
 def make_name_map(map_str):
     import re
     result = {}
@@ -207,16 +191,12 @@ def make_name_map(map_str):
     return result
 
 
-
-
 def transfer_data_table(db_conn, tbl_name, data_table):
     db_conn.executemany("insert into %s (%s) values (%s)" %
-            (tbl_name, 
+            (tbl_name,
                 ", ".join(data_table.column_names),
                 ", ".join("?" * len(data_table.column_names))),
             data_table.data)
-
-    
 
 
 def gather_single_file(outfile, infiles):
@@ -236,7 +216,7 @@ def gather_single_file(outfile, infiles):
 
     for dbname in infiles:
         pb.progress()
-        
+
         from pytools.log import LogManager
         logmgr = LogManager(dbname, "r")
 
@@ -247,16 +227,16 @@ def gather_single_file(outfile, infiles):
         for key, val in six.iteritems(logmgr.constants):
             if key not in seen_constants:
                 db_conn.execute("insert into constants values (?,?)",
-                        (key, buffer(dumps(val))))
+                        (key, memoryview(dumps(val))))
                 seen_constants.add(key)
 
         for qname, qdata in six.iteritems(logmgr.quantity_data):
             db_conn.execute("""insert into quantities values (?,?,?,?)""", (
                   qname, qdata.unit, qdata.description,
-                  buffer(dumps(qdata.default_aggregator))))
+                  memoryview(dumps(qdata.default_aggregator))))
 
             if qname not in seen_quantities:
-                db_conn.execute("""create table %s 
+                db_conn.execute("""create table %s
                   (step integer, rank integer, value real)""" % qname)
                 seen_quantities.add(qname)
 
@@ -270,8 +250,6 @@ def gather_single_file(outfile, infiles):
     db_conn.close()
 
 
-
-
 def _normalize_types(x):
     # get rid of numpy types
     if isinstance(x, int):
@@ -281,14 +259,12 @@ def _normalize_types(x):
     return x
 
 
-
-
 def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
         dbname_to_run_id):
     from pytools import ProgressBar
     pb = ProgressBar("Importing...", len(infiles))
 
-    feature_col_name_map ={}
+    feature_col_name_map = {}
     for fname in features:
         tgt_name = fmap.get(fname, fname)
 
@@ -310,9 +286,9 @@ def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
 
     db_conn.execute("""create table quantities (
             id integer primary key,
-            name text, 
-            unit text, 
-            description text, 
+            name text,
+            unit text,
+            description text,
             rank_aggregator text
             )""")
 
@@ -320,12 +296,11 @@ def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
 
     from os.path import dirname, basename
 
-    uid_to_run_id = {}
     written_run_ids = set()
 
     for dbname in infiles:
         pb.progress()
-        
+
         run_id = dbname_to_run_id[dbname]
 
         from pytools.log import LogManager
@@ -335,9 +310,9 @@ def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
             dbfeatures = fg.get_db_features(dbname, logmgr)
             qry = "insert into runs (%s) values (%s)" % (
                 ",".join(["id", "dirname", "filename"]
-                    + [feature_col_name_map[f[0]] for f in dbfeatures]), 
+                    + [feature_col_name_map[f[0]] for f in dbfeatures]),
                 ",".join("?" * (len(dbfeatures)+3)))
-            rows = db_conn.execute(qry, 
+            db_conn.execute(qry,
                     [run_id, dirname(dbname), basename(dbname)]
                     + [_normalize_types(f[2]) for f in dbfeatures])
 
@@ -346,11 +321,12 @@ def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
         for qname, qdat in six.iteritems(logmgr.quantity_data):
             tgt_qname = qmap.get(qname, qname)
 
-            if not tgt_qname in created_tables:
+            if tgt_qname not in created_tables:
                 created_tables.add(tgt_qname)
                 db_conn.execute("create table %s ("
-                  "run_id integer, step integer, rank integer, value real)" % tgt_qname)
-                  
+                  "run_id integer, step integer, rank integer, value real)"
+                  % tgt_qname)
+
                 db_conn.execute("create index %s_main on %s (run_id,step,rank)" % (
                     tgt_qname, tgt_qname))
 
@@ -375,8 +351,6 @@ def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
 
     db_conn.commit()
     db_conn.close()
-
-
 
 
 def main():
@@ -409,7 +383,7 @@ def main():
     outfile = args[0]
     from os.path import exists
     infiles = [fn for fn in args[1:] if exists(fn)]
-    not_found_files =  [fn for fn in args[1:] if not exists(fn)]
+    not_found_files = [fn for fn in args[1:] if not exists(fn)]
     if not_found_files:
         print("Warning: The follwing files were not found and are being ignored:")
         for fn in not_found_files:
@@ -438,9 +412,5 @@ def main():
                 dbname_to_run_id)
 
 
-
-
-
 if __name__ == "__main__":
     main()
-
