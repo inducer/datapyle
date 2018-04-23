@@ -4,6 +4,7 @@
 
 
 # main program ----------------------------------------------------------------
+from __future__ import absolute_import
 def main():
     import sys
     from optparse import OptionParser
@@ -23,7 +24,7 @@ def main():
 
     if len(args) == 2:
         db = make_wrapped_db(args[0], mangle=options.mangle, interactive=False)
-        execfile(args[1], make_runalyzer_symbols(db))
+        exec(compile(open(args[1]).read(), args[1], 'exec'), make_runalyzer_symbols(db))
     else:
         db = make_wrapped_db(args[0], mangle=options.mangle, interactive=True)
         from datapyle.runalyzer import RunalyzerConsole

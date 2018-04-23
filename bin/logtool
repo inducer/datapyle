@@ -1,5 +1,9 @@
 #! /usr/bin/python
 
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+from six.moves import zip
 def main():
     from pytools.log import LogManager
     import sys
@@ -79,7 +83,7 @@ following:
 
     def check_no_file():
         if logmgr is None:
-            raise RuntimeError, "no file loaded"
+            raise RuntimeError("no file loaded")
 
     next_legend = None
 
@@ -88,10 +92,10 @@ following:
         if cmd == "list":
             check_no_file()
 
-            print "Time series"
-            print "-----------"
+            print("Time series")
+            print("-----------")
 
-            items = list(logmgr.quantity_data.iteritems())
+            items = list(six.iteritems(logmgr.quantity_data))
             items.sort(lambda a,b: cmp(a[0], b[0]))
 
             if items:
@@ -100,12 +104,12 @@ following:
                 col0_len = 0
 
             for key, qdat in items:
-                print "%s\t%s" % (key.ljust(col0_len), qdat.description)
+                print("%s\t%s" % (key.ljust(col0_len), qdat.description))
 
-            print
-            print "Constants"
-            print "---------"
-            items = list(logmgr.constants.iteritems())
+            print()
+            print("Constants")
+            print("---------")
+            items = list(six.iteritems(logmgr.constants))
             items.sort(lambda a,b: cmp(a[0], b[0]))
 
             if items:
@@ -114,7 +118,7 @@ following:
                 col0_len = 0
 
             for key, value in items:
-                print "%s\t%s" % (key.ljust(col0_len), str(value))
+                print("%s\t%s" % (key.ljust(col0_len), str(value)))
         elif cmd == "plot":
             check_no_file()
 
@@ -161,7 +165,7 @@ following:
             next_legend = None
         elif cmd == "warnings":
             check_no_file()
-            print logmgr.get_warnings()
+            print(logmgr.get_warnings())
 
         elif cmd == "datafile":
             check_no_file()
@@ -191,7 +195,7 @@ following:
             for row in data:
                 tbl.add_row([row[0]]+row[1])
 
-            print tbl
+            print(tbl)
         elif cmd == "saveplot":
             saveplot_filename = args.pop(0)
         elif cmd == "print":
@@ -202,7 +206,7 @@ following:
             if access(cmd, R_OK):
                 logmgr = LogManager(cmd, "r")
             else:
-                raise IOError, "file '%s' not found" % cmd
+                raise IOError("file '%s' not found" % cmd)
 
     if did_plot:
         from matplotlib.pyplot import show, title, legend, axis, grid, rc, savefig

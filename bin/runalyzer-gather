@@ -3,7 +3,10 @@
 
 
 
+from __future__ import absolute_import
+from __future__ import print_function
 import re
+import six
 bool_feat_re = re.compile(r"^([a-z]+)(True|False)$")
 int_feat_re = re.compile(r"^([a-z]+)([0-9]+)$")
 real_feat_re = re.compile(r"^([a-z]+)([0-9]+\.?[0-9]*)$")
@@ -129,7 +132,7 @@ class FeatureGatherer:
             features.extend(parse_dir_feature(feat, i)
                     for i, feat in enumerate(dn.split("-")))
 
-        for name, value in logmgr.constants.iteritems():
+        for name, value in six.iteritems(logmgr.constants):
             features.append((name,) + sql_type_and_value(value))
 
         return features
@@ -152,7 +155,7 @@ def scan(fg, dbnames, progress=True):
         try:
             logmgr = LogManager(dbname, "r")
         except:
-            print "Trouble with file '%s'" % dbname
+            print("Trouble with file '%s'" % dbname)
             raise
 
         unique_run_id = logmgr.constants.get("unique_run_id")
@@ -241,13 +244,13 @@ def gather_single_file(outfile, infiles):
         transfer_data_table(db_conn, "warnings", logmgr.get_warnings())
 
         # transfer constants
-        for key, val in logmgr.constants.iteritems():
+        for key, val in six.iteritems(logmgr.constants):
             if key not in seen_constants:
                 db_conn.execute("insert into constants values (?,?)",
                         (key, buffer(dumps(val))))
                 seen_constants.add(key)
 
-        for qname, qdata in logmgr.quantity_data.iteritems():
+        for qname, qdata in six.iteritems(logmgr.quantity_data):
             db_conn.execute("""insert into quantities values (?,?,?,?)""", (
                   qname, qdata.unit, qdata.description,
                   buffer(dumps(qdata.default_aggregator))))
@@ -301,7 +304,7 @@ def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
             "dirname text",
             "filename text",
             ] + ["%s %s" % (feature_col_name_map[fname], ftype)
-                    for fname, ftype in features.iteritems()]
+                    for fname, ftype in six.iteritems(features)]
     db_conn.execute("create table runs (%s)" % ",".join(run_columns))
     db_conn.execute("create index runs_id on runs (id)")
 
@@ -340,7 +343,7 @@ def gather_multi_file(outfile, infiles, fmap, qmap, fg, features,
 
             written_run_ids.add(run_id)
 
-        for qname, qdat in logmgr.quantity_data.iteritems():
+        for qname, qdat in six.iteritems(logmgr.quantity_data):
             tgt_qname = qmap.get(qname, qname)
 
             if not tgt_qname in created_tables:
@@ -408,9 +411,9 @@ def main():
     infiles = [fn for fn in args[1:] if exists(fn)]
     not_found_files =  [fn for fn in args[1:] if not exists(fn)]
     if not_found_files:
-        print "Warning: The follwing files were not found and are being ignored:"
+        print("Warning: The follwing files were not found and are being ignored:")
         for fn in not_found_files:
-            print "  ", fn
+            print("  ", fn)
 
     # list of run features as {name: sql_type}
     fg = FeatureGatherer(options.dir_features, options.file_features)
@@ -420,8 +423,8 @@ def main():
     qmap = make_name_map(options.quantity_map)
 
     if options.show_features:
-        for feat_name, feat_type in features.iteritems():
-            print fmap.get(feat_name, feat_name), feat_type
+        for feat_name, feat_type in six.iteritems(features):
+            print(fmap.get(feat_name, feat_name), feat_type)
         sys.exit(0)
 
     if options.single:
