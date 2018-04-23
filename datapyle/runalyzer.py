@@ -1,41 +1,32 @@
 #! /usr/bin/env python
 
-
-
-
 from __future__ import absolute_import
 from __future__ import print_function
 import code
 from six.moves import zip
 
 
-
-
 try:
     import readline
-    import rlcompleter
+    import rlcompleter  # noqa: F401
     HAVE_READLINE = True
 except ImportError:
     HAVE_READLINE = False
 
 
-
-
 from pytools import cartesian_product, Record
+
+
 class PlotStyle(Record):
     pass
-
-
 
 
 PLOT_STYLES = [
         PlotStyle(dashes=dashes, color=color)
         for dashes, color in cartesian_product(
-            [(), (12, 2), (4, 2),  (2,2), (2,8) ],
+            [(), (12, 2), (4, 2),  (2, 2), (2, 8)],
             ["blue", "green", "red", "magenta", "cyan"],
             )]
-
-
 
 
 class RunDB(object):
@@ -130,8 +121,6 @@ class RunDB(object):
         print(table_from_cursor(cursor))
 
 
-
-
 def split_cursor(cursor):
     x = []
     y = []
@@ -156,8 +145,6 @@ def split_cursor(cursor):
         yield x, y, last_rest
 
 
-
-
 def table_from_cursor(cursor):
     from pytools import Table
     tbl = Table()
@@ -167,12 +154,10 @@ def table_from_cursor(cursor):
     return tbl
 
 
-
-
 class MagicRunDB(RunDB):
     def mangle_sql(self, qry):
         up_qry = qry.upper()
-        if "FROM" in up_qry and not "$$" in up_qry:
+        if "FROM" in up_qry and "$$" not in up_qry:
             return qry
 
         magic_columns = set()
@@ -193,7 +178,8 @@ class MagicRunDB(RunDB):
         magic_column_re = re.compile(r"\$([a-zA-Z][A-Za-z0-9_]*)(\.[a-z]*)?")
         qry = magic_column_re.sub(replace_magic_column, qry)
 
-        other_clauses = ["UNION",  "INTERSECT", "EXCEPT", "WHERE", "GROUP",
+        other_clauses = [  # noqa: F841
+                "UNION",  "INTERSECT", "EXCEPT", "WHERE", "GROUP",
                 "HAVING", "ORDER", "LIMIT", ";"]
 
         from_clause = "from runs "
@@ -238,7 +224,7 @@ class MagicRunDB(RunDB):
 
         # add 'from'
         if "$$" in qry:
-            qry = qry.replace("$$"," %s " % from_clause)
+            qry = qry.replace("$$", " %s " % from_clause)
         else:
             clause_indices = get_clause_indices(qry)
 
@@ -247,14 +233,11 @@ class MagicRunDB(RunDB):
             else:
                 first_clause_idx = min(clause_indices.values())
                 qry = (
-                        qry[:first_clause_idx]
-                        +from_clause
-                        +qry[first_clause_idx:])
-
+                        qry[:first_clause_idx] +
+                        from_clause +
+                        qry[first_clause_idx:])
 
         return qry
-
-
 
 
 def make_runalyzer_symbols(db):
@@ -272,22 +255,20 @@ def make_runalyzer_symbols(db):
             }
 
 
-
-
 class RunalyzerConsole(code.InteractiveConsole):
     def __init__(self, db):
         self.db = db
-        code.InteractiveConsole.__init__(self, 
+        code.InteractiveConsole.__init__(self,
                 make_runalyzer_symbols(db))
 
         try:
-            import numpy
+            import numpy  # noqa: F401
             self.runsource("from numpy import *")
         except ImportError:
             pass
 
         try:
-            import matplotlib.pyplot
+            import matplotlib.pyplot  # noqa
             self.runsource("from matplotlib.pyplot import *")
         except ImportError:
             pass
@@ -310,14 +291,13 @@ class RunalyzerConsole(code.InteractiveConsole):
         if cmdline.startswith("."):
             try:
                 self.execute_magic(cmdline)
-            except:
+            except Exception:
                 import traceback
                 traceback.print_exc()
         else:
             self.last_push_result = code.InteractiveConsole.push(self, cmdline)
 
         return self.last_push_result
-
 
     def execute_magic(self, cmdline):
         cmd_end = cmdline.find(" ")
@@ -385,13 +365,15 @@ Available Python symbols:
             print("invalid magic command")
 
 
+# {{{ custom aggregates
+
+from pytools import VarianceAggregator  # noqa: E402
 
 
-# custom aggregates -----------------------------------------------------------
-from pytools import VarianceAggregator
 class Variance(VarianceAggregator):
     def __init__(self):
         VarianceAggregator.__init__(self, entire_pop=True)
+
 
 class StdDeviation(Variance):
     def finalize(self):
@@ -403,6 +385,7 @@ class StdDeviation(Variance):
             from math import sqrt
             return sqrt(result)
 
+
 class Norm1:
     def __init__(self):
         self.abs_sum = 0
@@ -412,6 +395,7 @@ class Norm1:
 
     def finalize(self):
         return self.abs_sum
+
 
 class Norm2:
     def __init__(self):
@@ -424,13 +408,15 @@ class Norm2:
         from math import sqrt
         return sqrt(self.square_sum)
 
+
 def my_sprintf(format, arg):
     return format % arg
 
+# }}}
 
 
+# {{{ main program
 
-# main program ----------------------------------------------------------------
 def make_wrapped_db(filename, interactive, mangle):
     import sqlite3
     db = sqlite3.connect(filename)
@@ -450,3 +436,7 @@ def make_wrapped_db(filename, interactive, mangle):
         db_wrap_class = RunDB
 
     return db_wrap_class(db, interactive=interactive)
+
+# }}}
+
+# vim: foldmethod=marker
