@@ -26,11 +26,7 @@ setup(name="datapyle",
 
       author="Andreas Kloeckner",
       url="http://pypi.python.org/pypi/datapyle",
-      scripts=[
-          "bin/logtool",
-          "bin/runalyzer-gather",
-          "bin/runalyzer",
-          "bin/couch-queue"],
+      scripts=["bin/couch-queue"],
       author_email="inform@tiker.net",
       license="MIT",
       packages=["datapyle"],
